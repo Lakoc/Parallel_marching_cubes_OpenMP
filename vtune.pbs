@@ -17,7 +17,7 @@ cd build_vtune
 CC=icc CXX=icpc cmake ..
 make
 
-for threads in 18 32; do
+for threads in 18 36; do
     for builder in "ref" "loop" "tree"; do
         rm -rf vtune-${builder}-${threads}
         vtune -collect threading -r vtune-${builder}-${threads} -app-working-dir . -- ./PMC --builder ${builder} -t ${threads} --grid 128 ../data/bun_zipper_res3.pts
