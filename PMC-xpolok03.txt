@@ -1,17 +1,29 @@
 Architektury Výpočetních Systémů (AVS 2021)
 Projekt č. 2 (PMC)
-Login: xlogin00
+Login: xpolok03
 
 Úloha 1: Paralelizace původního řešení
 ===============================================================================
 
 1) Kterou ze smyček (viz zadání) je vhodnější paralelizovat a co způsobuje 
    neefektivitu paralelizaci té druhé?
+   Je vhodnější pararelizovat vnější smyčku ve funkci marchCubes, ma dostatečný počet iterací (gridSize^3) na to aby byla pararelizace výhodna a výpočet vně jedné iterace je dostatečně dlouhý na to aby nás nebrzdila režie.
+   Naopak pokud bychom se rozhodli pararelizovat smyčku ve funkci evaluateFieldAt muselo by master vlákno čekat na výpočet vzdálenosti  vůči všem bodům příslušných vláken, zbortit výsledek a až pak se posunout na další pozici, navíc celý výpočet buildCube by probíhal sekvenčně.
+   Další možností se jeví zpararelizovat obě smyčky, avšak nutná režie a přepinání kontextu zpomaluje výpočet.
+   Zrychlení výpočtu bylo dále dosaženo vektorizaci smyčky v evaluateFieldAt.
 
 2) Jaké plánování (rozdělení práce mezi vlákna) jste zvolili a proč? 
    Jaký vliv má velikost "chunk" při dynamickém plánování (8, 16, 32, 64)?
+   Jelikož výpočet mezi iteracemi se nijak neliší je zcela přirozené použít statické plánování. Provedené experimenty toto zjištění potvrdily.
+   Iterace na sebe nejsou nijak závislé tedy ideálně chceme rozdistribuovat všechen výpočet mezi vlákna ekvivaletně a vyhnout se jakékoliv režii.
+   Uvažme celkový objem práce jako W a počet vláken jako N. Idealní volbou by byl chunk o velikosti W/N.
+   V tomto případě se dostaneme s dynamickým plánováním na podobnou rychlost jako ze statickým.
+
+
 
 3) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
+   Naivním řešením se jeví sekce critical případně atomic, ty však vedou k zbytečnému zámku a čekání mezi vlákny k přístupu k bufferu.
+   Předělal jsem tedy 1D buffer na 2D buffer, kde maximální počet vláken úrčuje velikost první dimenze. Příslušné buffery jsou na konci výpočtu zřetězeny.
 
 
 Úloha 2: Paralelní průchod stromem
