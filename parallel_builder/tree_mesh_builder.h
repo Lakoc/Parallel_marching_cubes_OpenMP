@@ -20,7 +20,7 @@ public:
 
 protected:
     unsigned marchCubes(const ParametricScalarField &field) override;
-    unsigned divideCube(const ParametricScalarField &field, Vec3_t<unsigned> &pos, unsigned edgeSize, unsigned depth);
+    void divideCube(const ParametricScalarField &field, Vec3_t<unsigned> &pos, unsigned edgeSize, unsigned depth);
     float evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) override;
     void emitTriangle(const Triangle_t &triangle) override;
     const Triangle_t *getTrianglesArray() const override { return mTriangles.data(); }
@@ -38,6 +38,7 @@ protected:
             {0,                    0 + mGridSize, 0 + mGridSize},
             {0 + mGridSize, 0 + mGridSize, 0 + mGridSize},
     };
+    std::vector<unsigned> triangles_count;
 };
 
 #endif // TREE_MESH_BUILDER_H

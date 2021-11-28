@@ -19,94 +19,88 @@ TreeMeshBuilder::TreeMeshBuilder(unsigned gridEdgeSize)
     int threads = omp_get_max_threads();
     std::vector<std::vector<Triangle_t>> triangles(threads);
     mThreadTriangles = triangles;
+    std::vector<unsigned> t_count(threads, 0);
+    triangles_count = t_count;
 }
 
 unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field) {
-    // Suggested approach to tackle this problem is to add new method to
-    // this class. This method will call itself to process the children.
-    // It is also strongly suggested to first implement Octree as sequential
-    // code and only when that works add OpenMP tasks to achieve parallelism.
-    // 1. Compute total number of cubes in the grid.
-
     unsigned totalTriangles;
     Vec3_t<unsigned> startPoint(0, 0, 0);
 
-    // 2. Loop over each coordinate in the 3D grid.
-#pragma omp parallel default(none) shared(totalTriangles, mGridSize, startPoint, field)
+    // 1. Start recursion with single thread
+    #pragma omp parallel default(none) shared(totalTriangles, mGridSize, startPoint, field)
     {
-#pragma omp master
+        #pragma omp single
         {
-            totalTriangles = divideCube(field, startPoint, mGridSize, 1);
+            divideCube(field, startPoint, mGridSize, 1);
         }
 
     }
-    // Flatten Triangles vector
+
+    // 2. Flatten Triangles vector
     for (auto tVec: mThreadTriangles) {
         mTriangles.insert(std::end(mTriangles), std::begin(tVec), std::end(tVec));
     }
+
+    // 3. Sum up triangles
+    for (auto thread_c: triangles_count) {
+        totalTriangles += thread_c;
+    }
+
     return totalTriangles;
 }
 
 
-unsigned
+void
 TreeMeshBuilder::divideCube(const ParametricScalarField &field, Vec3_t<unsigned> &pos, unsigned edgeSize,
-                            unsigned depth) {
-    // Suggested approach to tackle this problem is to add new method to
-    // this class. This method will call itself to process the children.
-    // It is also strongly suggested to first implement Octree as sequential
-    // code and only when that works add OpenMP tasks to achieve parallelism.
+                            unsigned gridDivision) {
     unsigned halfOfEdgeLen = edgeSize / 2;
-    unsigned nextDepth = depth * 2;
-    if (edgeSize <= 4) {
+    unsigned nextGridDivision= gridDivision * 2;
 
+    // 1. If sequential threshold is met start seq
+    if (edgeSize == 1 || gridDivision >=8) {
         size_t totalCubesCount = edgeSize * edgeSize * edgeSize;
+        unsigned count = 0;
 
-        unsigned totalTriangles = 0;
-
-        // 2. Loop over each coordinate in the 3D grid.
+        // 2a. Loop over each coordinate in the 3D grid.
         for (size_t i = 0; i < totalCubesCount; ++i) {
-            // 3. Compute 3D position in the grid.
+            // 3a. Compute 3D position in the grid.
             Vec3_t<float> cubeOffset(static_cast<float>(pos.x + (i % edgeSize)),
                                      static_cast<float>(pos.y + ((i / edgeSize) % edgeSize)),
                                      static_cast<float>(pos.z + (i / (edgeSize * edgeSize)))); // NOLINT
-            // 4. Evaluate "Marching Cube" at given position in the grid and
+            // 4a. Evaluate "Marching Cube" at given position in the grid and
             //    store the number of triangles generated.
-            totalTriangles += buildCube(cubeOffset, field);
+            count += buildCube(cubeOffset, field);
         }
-        return totalTriangles;
+        // 5a. Add number to current thread count
+        triangles_count[omp_get_thread_num()] += count;
+        return;
     }
 
+    // 2b. Calculate object range
+    auto objectRange = static_cast<float>( mIsoLevel + ((sqrt(3.0) / 2.0) * halfOfEdgeLen));
 
-    unsigned triangles = 0;
-    auto objectRange = static_cast<float>( mIsoLevel + sqrt(3.0) / 2.0 * mGridSize);
+    // 3b. Iterate over offsets and calculate startPosition and MidPoint
     for (auto offset: offsets) {
-        Vec3_t<unsigned> startPos(pos.x + (offset.x / nextDepth),
-                                  pos.y + (offset.y / nextDepth),
-                                  pos.z + (offset.z / nextDepth));
+        Vec3_t<unsigned> startPos(pos.x + (offset.x / nextGridDivision),
+                                  pos.y + (offset.y / nextGridDivision),
+                                  pos.z + (offset.z / nextGridDivision));
 
         Vec3_t<float> cubeMidPoint(static_cast<float>((startPos.x + halfOfEdgeLen)) * mGridResolution,
                                    static_cast<float>((startPos.y + halfOfEdgeLen)) * mGridResolution,
                                    static_cast<float>((startPos.z + +halfOfEdgeLen)) * mGridResolution);
 
 
+        // 4b. Calculate cube val and check if object is in current sub-block
         float cube_val = evaluateFieldAt(cubeMidPoint, field);
         if (cube_val <= objectRange) {
-#pragma omp task default(none) shared(field, triangles) firstprivate( startPos, halfOfEdgeLen, nextDepth)
+            #pragma omp task default(none) shared(field) firstprivate(startPos, halfOfEdgeLen, nextGridDivision)
             {
-#pragma omp atomic
-                triangles += divideCube(field, startPos, halfOfEdgeLen, nextDepth);
-
+                // 5b. If condition is met create task of that sub-space
+                divideCube(field, startPos, halfOfEdgeLen, nextGridDivision);
             }
         }
-
     }
-
-
-#pragma omp taskwait
-
-    return triangles;
-
-
 }
 
 float TreeMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) {
@@ -121,7 +115,7 @@ float TreeMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const Parametri
 
     // 2. Find minimum square distance from points "pos" to any point in the
     //    field.
-#pragma omp simd reduction(min: value)
+    #pragma omp simd reduction(min: value)
     for (unsigned i = 0; i < count; ++i) {
         float distanceSquared = (pos.x - pPoints[i].x) * (pos.x - pPoints[i].x);
         distanceSquared += (pos.y - pPoints[i].y) * (pos.y - pPoints[i].y);

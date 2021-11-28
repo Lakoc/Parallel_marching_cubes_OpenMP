@@ -30,13 +30,26 @@ Login: xpolok03
 ===============================================================================
 
 1) Stručně popište použití OpenMP tasků ve vašem řešení.
+   Jak je naznačeno tasky jsou vytvořeny po rozgenerování potomků aktuálního bloku.
+   Task je vytvořen až po ověření možnosti průchodu hledaného povrchu daným potomkem.
 
 2) Jakým způsobem jste realizovali sesbírání celkového počtu trojúhelníků?
+   Podobně jako v předchozím případě jsem řešil sesbirání tvorbou čítačů pro příslušná vlákna, tak aby bylo zamezeno zbytečnému taskwait a nutnosti atomické operace.
+   Celkový počet je potom sečten v sekvenční části sečtením čítačů příslušných vláken.
 
 3) Jaký vliv má na vaše řešení tzv. "cut-off"? Je vhodné vytvářet nový 
    task pro každou krychli na nejnižší úrovni?
 
+   Hodnota idealního "cutt off" je přímo závislá na objektu, jež se snažíme vykreslit, počtu dostupných fyzických jader a parametrech mGridSize a mIsoLevel.
+   Příliš nízký "cutt off" vede k spuštění výpočtu i pro prostor, ve kterém může být majoritní prostor bloků prázdný.
+   Naopak příliš vysoký "cutt off" vede k vytvoření velkého počtu vláken a k tomu spojené přehnané režii.
+   Z těchto důvodů jsem se rozhodl zastavit generování potomků v hloubce zanoření 3.
+
+   Určtitě není vhodné vytvářet task pro krychli, která neobsahuje hledaný prostor a pro krychle na nejnižší urovní.
+   Tasky by obsahovaly pouze jednoduchý výpočet, který by byl doprovozen vysokou režií.
+
 4) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
+   Stejným způsobem jako v bodě 1.3.
 
 Úloha 3: Grafy škálování všech řešení
 ===============================================================================
