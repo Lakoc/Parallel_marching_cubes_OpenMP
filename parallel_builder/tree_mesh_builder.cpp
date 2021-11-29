@@ -24,7 +24,7 @@ TreeMeshBuilder::TreeMeshBuilder(unsigned gridEdgeSize)
 }
 
 unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field) {
-    unsigned totalTriangles;
+    unsigned totalTriangles = 0;
     Vec3_t<unsigned> startPoint(0, 0, 0);
 
     // 1. Start recursion with single thread
@@ -92,8 +92,8 @@ TreeMeshBuilder::divideCube(const ParametricScalarField &field, Vec3_t<unsigned>
 
 
         // 4b. Calculate cube val and check if object is in current sub-block
-        float cube_val = evaluateFieldAt(cubeMidPoint, field);
-        if (cube_val <= objectRange) {
+        float cubeVal = evaluateFieldAt(cubeMidPoint, field);
+        if (cubeVal <= objectRange) {
             #pragma omp task default(none) shared(field) firstprivate(startPos, halfOfEdgeLen, nextGridDivision)
             {
                 // 5b. If condition is met create task of that sub-space
@@ -101,6 +101,7 @@ TreeMeshBuilder::divideCube(const ParametricScalarField &field, Vec3_t<unsigned>
             }
         }
     }
+    #pragma omp taskwait
 }
 
 float TreeMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) {
@@ -138,3 +139,5 @@ void TreeMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle) 
     // after "marchCubes(...)" call ends.
     mThreadTriangles[omp_get_thread_num()].push_back(triangle);
 }
+
+

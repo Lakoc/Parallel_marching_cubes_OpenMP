@@ -34,7 +34,7 @@ Login: xpolok03
    Task je vytvořen až po ověření možnosti průchodu hledaného povrchu daným potomkem.
 
 2) Jakým způsobem jste realizovali sesbírání celkového počtu trojúhelníků?
-   Podobně jako v předchozím případě jsem řešil sesbirání tvorbou čítačů pro příslušná vlákna, tak aby bylo zamezeno zbytečnému taskwait a nutnosti atomické operace.
+   Podobně jako v předchozím případě jsem řešil sesbirání tvorbou čítačů pro příslušná vlákna, tak aby bylo zamezeno zbytečné nutnosti atomické operace.
    Celkový počet je potom sečten v sekvenční části sečtením čítačů příslušných vláken.
 
 3) Jaký vliv má na vaše řešení tzv. "cut-off"? Je vhodné vytvářet nový 
