@@ -7,6 +7,7 @@ Login: xpolok03
 
 1) Kterou ze smyček (viz zadání) je vhodnější paralelizovat a co způsobuje 
    neefektivitu paralelizaci té druhé?
+
    Je vhodnější pararelizovat vnější smyčku ve funkci marchCubes, ma dostatečný počet iterací (gridSize^3) na to aby byla pararelizace výhodna a výpočet vně jedné iterace je dostatečně dlouhý na to aby nás nebrzdila režie.
    Naopak pokud bychom se rozhodli pararelizovat smyčku ve funkci evaluateFieldAt muselo by master vlákno čekat na výpočet vzdálenosti  vůči všem bodům příslušných vláken, zbortit výsledek a až pak se posunout na další pozici, navíc celý výpočet buildCube by probíhal sekvenčně.
    Další možností se jeví zpararelizovat obě smyčky, avšak nutná režie a přepinání kontextu zpomaluje výpočet.
@@ -14,6 +15,7 @@ Login: xpolok03
 
 2) Jaké plánování (rozdělení práce mezi vlákna) jste zvolili a proč? 
    Jaký vliv má velikost "chunk" při dynamickém plánování (8, 16, 32, 64)?
+
    Jelikož výpočet mezi iteracemi se nijak neliší je zcela přirozené použít statické plánování. Provedené experimenty toto zjištění potvrdily.
    Iterace na sebe nejsou nijak závislé tedy ideálně chceme rozdistribuovat všechen výpočet mezi vlákna ekvivaletně a vyhnout se jakékoliv režii.
    Uvažme celkový objem práce jako W a počet vláken jako N. Idealní volbou by byl chunk o velikosti W/N.
@@ -22,6 +24,7 @@ Login: xpolok03
 
 
 3) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
+
    Naivním řešením se jeví sekce critical případně atomic, ty však vedou k zbytečnému zámku a čekání mezi vlákny k přístupu k bufferu.
    Předělal jsem tedy 1D buffer na 2D buffer, kde maximální počet vláken úrčuje velikost první dimenze. Příslušné buffery jsou na konci výpočtu zřetězeny.
 
@@ -30,10 +33,12 @@ Login: xpolok03
 ===============================================================================
 
 1) Stručně popište použití OpenMP tasků ve vašem řešení.
+
    Jak je naznačeno tasky jsou vytvořeny po rozgenerování potomků aktuálního bloku.
    Task je vytvořen až po ověření možnosti průchodu hledaného povrchu daným potomkem.
 
 2) Jakým způsobem jste realizovali sesbírání celkového počtu trojúhelníků?
+
    Podobně jako v předchozím případě jsem řešil sesbirání tvorbou čítačů pro příslušná vlákna, tak aby bylo zamezeno zbytečné nutnosti atomické operace.
    Celkový počet je potom sečten v sekvenční části sečtením čítačů příslušných vláken.
 
@@ -49,12 +54,14 @@ Login: xpolok03
    Tasky by obsahovaly pouze jednoduchý výpočet, který by byl doprovozen vysokou režií.
 
 4) Jakým způsobem zajišťujete ukládání trojúhelníků z několika vláken současně?
+
    Stejným způsobem jako v bodě 1.3.
 
 Úloha 3: Grafy škálování všech řešení
 ===============================================================================
 
 1) Stručně zhodnoťte efektivitu vytvořených řešení (na základě grafů škálování).
+
    Oba řešení jsou poměrně efektivní.
    Algoritmus s využitím rozdelělení iterací smyčky mezi vlákna se jeví, že lépe škáluje, ačkoliv rozdíl není na první pohled zcela zřejmý.
    Dosahuje lepších časů na malých vstupech, kde nedochází k žádnému vypuštění výpočtu u octree a na velkých vstupech, kde režie u octree výpočet značně zpomaluje.
@@ -64,6 +71,7 @@ Login: xpolok03
 
 2) V jakém případě (v závislosti na počtu bodů ve vstupním souboru a velikosti 
    mřížky) bude vaše řešení 1. úlohy neefektivní? (pokud takový případ existuje)
+
    Řešení je neefektivní na vstupu o velikosti 80 a 160 a počtu jader 32.
    32 - (80 % 32) = 16
    32 - (160 % 32) = 16
@@ -71,6 +79,7 @@ Login: xpolok03
 
 3) Je (nebo není) stromový algoritmus efektivnější z pohledu slabého škálování 
    vzhledem ke vstupu?
+
    Jeví se jako efektivnější ačkoliv rozdíl není až tak veliký.
    U algoritmu Octree dochází k zajimavému chování u malého vstupu a šestnásti jader kdy je změřený čas exponenciálně vyšší než čas 8 a 32 jader na stejné úloze.
    Toto chování může možná souviset s hloubkou zanoření. Nepodařilo se mi však najít, co je příčinou tohoto problému.
@@ -93,6 +102,7 @@ Login: xpolok03
    tree: 29.519, 82%
 
 3) Jaké jsou závěry z těchto měření?
+
    Jak už bylo zmíněno implementace loop se zdá efektivnější, což měření potvrzují.
    Je vidět, že implementací jsou poměrně efektivní v obou případech 80%, respektive 90% procent dostupných logických jader je využito.
 
