@@ -55,12 +55,25 @@ Login: xpolok03
 ===============================================================================
 
 1) Stručně zhodnoťte efektivitu vytvořených řešení (na základě grafů škálování).
+   Oba řešení jsou poměrně efektivní.
+   Algoritmus s využitím rozdelělení iterací smyčky mezi vlákna se jeví, že lépe škáluje, ačkoliv rozdíl není na první pohled zcela zřejmý.
+   Dosahuje lepších časů na malých vstupech, kde nedochází k žádnému vypuštění výpočtu u octree a na velkých vstupech, kde režie u octree výpočet značně zpomaluje.
+   Výkonnost algoritmu octree je dost závislá na zvoleném "cut-off" prahu a rozložení vstupního objektu v prostoru.
+
+
 
 2) V jakém případě (v závislosti na počtu bodů ve vstupním souboru a velikosti 
    mřížky) bude vaše řešení 1. úlohy neefektivní? (pokud takový případ existuje)
+   Řešení je neefektivní na vstupu o velikosti 80 a 160 a počtu jader 32.
+   32 - (80 % 32) = 16
+   32 - (160 % 32) = 16
+   Y následujících výpočtu plyne, že v ůrčitém momentě nám 16 jader (polovina) nic nepočítá a na daném vstupu je tedy verze loop neefektivní.
 
 3) Je (nebo není) stromový algoritmus efektivnější z pohledu slabého škálování 
    vzhledem ke vstupu?
+   Jeví se jako efektivnější ačkoliv rozdíl není až tak veliký.
+   U algoritmu Octree dochází k zajimavému chování u malého vstupu a šestnásti jader kdy je změřený čas exponenciálně vyšší než čas 8 a 32 jader na stejné úloze.
+   Toto chování může možná souviset s hloubkou zanoření. Nepodařilo se mi však najít, co je příčinou tohoto problému.
 
 Úloha 4: Analýza využití jader pomocí VTune
 ================================================================================
@@ -68,16 +81,18 @@ Login: xpolok03
 1) Jaké bylo průměrné využití jader pro všechny tři implementace s omezením na 
    18 vláken? Na kolik procent byly využity?
    
-   ref:
-   loop:
-   tree:
+   ref: 0.996, (2.8% vzhledem k 36 logickým, 5.6% vzhledem k 18 logickým)
+   loop: 17.118, (47.6% vzhledem k 36 logickým, 95.2% vzhledem k 18 logickým)
+   tree: 16.234, (45.1% vzhledem k 36 logickým, 90.2% vzhledem k 18 logickým)
 
 2) Jaké bylo průměrné využití jader pro všechny tři implementace s využitím 
    všech jader? Na kolik procent se podařilo využít obě CPU?
    
-   ref:
-   loop:
-   tree:
+   ref: 0.997, 2.8%
+   loop: 30.887, 85.8%
+   tree: 29.519, 82%
 
 3) Jaké jsou závěry z těchto měření?
+   Jak už bylo zmíněno implementace loop se zdá efektivnější, což měření potvrzují.
+   Je vidět, že implementací jsou poměrně efektivní v obou případech 80%, respektive 90% procent dostupných logických jader je využito.
 
