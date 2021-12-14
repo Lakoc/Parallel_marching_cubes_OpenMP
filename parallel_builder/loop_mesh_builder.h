@@ -29,6 +29,10 @@ protected:
 
     std::vector<Triangle_t> mTriangles;
     std::vector<std::vector<Triangle_t>> mThreadTriangles;
+    std::vector<float> pPointsX;
+    std::vector<float> pPointsY;
+    std::vector<float> pPointsZ;
+    unsigned pointsCount;
 };
 
 #endif // LOOP_MESH_BUILDER_H

@@ -9,7 +9,6 @@
  **/
 
 #include <cmath>
-#include <iostream>
 #include <limits>
 #include <omp.h>
 #include "loop_mesh_builder.h"
@@ -19,16 +18,27 @@ LoopMeshBuilder::LoopMeshBuilder(unsigned gridEdgeSize)
     int threads = omp_get_max_threads();
     std::vector<std::vector<Triangle_t>> triangles(threads);
     mThreadTriangles = triangles;
+    pointsCount = 0;
 }
 
 unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field) {
+    // 0. Retype vec of structs to struct of vectors
+    pointsCount = unsigned(field.getPoints().size());
+    const Vec3_t<float> *pPoints = field.getPoints().data();
+
+    for (size_t i = 0; i < pointsCount; i++) {
+        pPointsX.push_back(pPoints[i].x);
+        pPointsY.push_back(pPoints[i].y);
+        pPointsZ.push_back(pPoints[i].z);
+    }
+
     // 1. Compute total number of cubes in the grid.
     size_t totalCubesCount = mGridSize * mGridSize * mGridSize;
 
     unsigned totalTriangles = 0;
 
     // 2. Loop over each coordinate in the 3D grid.
-#pragma omp parallel for default(none) shared(totalCubesCount, field) reduction(+: totalTriangles) schedule(static)
+    #pragma omp parallel for default(none) shared(totalCubesCount, field) reduction(+: totalTriangles) schedule(static)
     for (size_t i = 0; i < totalCubesCount; ++i) {
         // 3. Compute 3D position in the grid.
         Vec3_t<float> cubeOffset(static_cast<float>(i % mGridSize),
@@ -52,27 +62,23 @@ unsigned LoopMeshBuilder::marchCubes(const ParametricScalarField &field) {
 float LoopMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const ParametricScalarField &field) {
     // NOTE: This method is called from "buildCube(...)"!
 
-    // 1. Store pointer to and number of 3D points in the field
-    //    (to avoid "data()" and "size()" call in the loop).
-    const Vec3_t<float> *pPoints = field.getPoints().data();
-    const auto count = unsigned(field.getPoints().size());
-
     float value = std::numeric_limits<float>::max();
 
-    // 2. Find minimum square distance from points "pos" to any point in the
-    //    field.
-#pragma omp simd reduction(min: value)
-    for (unsigned i = 0; i < count; ++i) {
-        float distanceSquared = (pos.x - pPoints[i].x) * (pos.x - pPoints[i].x);
-        distanceSquared += (pos.y - pPoints[i].y) * (pos.y - pPoints[i].y);
-        distanceSquared += (pos.z - pPoints[i].z) * (pos.z - pPoints[i].z);
-
+    // 1. Find minimum square distance from points "pos" to any point in the field.
+    #pragma omp simd reduction(min: value)
+    for (unsigned i = 0; i < pointsCount; ++i) {
+        float x = pPointsX[i];
+        float y = pPointsY[i];
+        float z = pPointsZ[i];
+        float distanceSquared = (pos.x - x) * (pos.x - x);
+        distanceSquared += (pos.y - y) * (pos.y - y);
+        distanceSquared += (pos.z - z) * (pos.z - z);
         // Comparing squares instead of real distance to avoid unnecessary
         // "sqrt"s in the loop.
         value = std::min(value, distanceSquared);
     }
 
-    // 3. Finally, take square root of the minimal square distance to get the real distance
+    // 2. Finally, take square root of the minimal square distance to get the real distance
     return std::sqrt(value);
 }
 

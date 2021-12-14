@@ -12,6 +12,7 @@
 #define TREE_MESH_BUILDER_H
 
 #include "base_mesh_builder.h"
+#include <cmath>
 
 class TreeMeshBuilder : public BaseMeshBuilder
 {
@@ -28,7 +29,8 @@ protected:
     std::vector<Triangle_t> mTriangles;
     std::vector<std::vector<Triangle_t>> mThreadTriangles;
 
-    std::vector<Vec3_t<unsigned >> offsets{
+    std::vector<std::vector<Vec3_t<unsigned >>> offsets{
+        {
             {0,                    0,                    0},
             {0 + mGridSize, 0,                    0},
             {0,                    0 + mGridSize, 0},
@@ -37,8 +39,14 @@ protected:
             {0 + mGridSize, 0,                    0 + mGridSize},
             {0,                    0 + mGridSize, 0 + mGridSize},
             {0 + mGridSize, 0 + mGridSize, 0 + mGridSize},
+        },
     };
-    std::vector<unsigned> triangles_count;
+    std::vector<unsigned> trianglesCount;
+    std::vector<float> pPointsX;
+    std::vector<float> pPointsY;
+    std::vector<float> pPointsZ;
+    unsigned pointsCount;
+    size_t maxDepth = 3;
 };
 
 #endif // TREE_MESH_BUILDER_H
